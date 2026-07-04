@@ -36,6 +36,8 @@ export class FactsController extends AbstractViewController implements InternalE
   facts: FactItem[] = []
   searchQuery = ''
   canRenderProtectedValues = false
+  private pendingBlankFactCreate?: Promise<FactItem>
+  private pendingBlankFact?: FactItem
 
   constructor(
     private items: ItemManagerInterface,
@@ -118,19 +120,74 @@ export class FactsController extends AbstractViewController implements InternalE
   }
 
   async createFact(draft: FactDraft): Promise<FactItem> {
-    const fact = await this.mutator.createItem<FactItem, FactContent>(
-      FactContentType,
-      FillItemContent<FactContent>({
-        title: draft.title,
-        value: draft.value,
-        kind: draft.kind || 'plain',
-        notes: draft.notes,
-      }),
-      true,
+    if (this.isBlankFactDraft(draft)) {
+      const reusableBlankFact = this.findReusableBlankFact()
+      if (reusableBlankFact) {
+        await this.openFact(reusableBlankFact)
+        return reusableBlankFact
+      }
+
+      if (this.pendingBlankFactCreate) {
+        return this.pendingBlankFactCreate
+      }
+    }
+
+    const create = async () => {
+      const fact = await this.mutator.createItem<FactItem, FactContent>(
+        FactContentType,
+        FillItemContent<FactContent>({
+          title: draft.title,
+          value: draft.value,
+          kind: draft.kind || 'plain',
+          notes: draft.notes,
+        }),
+        true,
+      )
+      await this.sync.sync()
+      await this.openFact(fact)
+      return fact
+    }
+
+    if (this.isBlankFactDraft(draft)) {
+      this.pendingBlankFactCreate = create()
+      try {
+        const fact = await this.pendingBlankFactCreate
+        this.pendingBlankFact = fact
+        return fact
+      } finally {
+        this.pendingBlankFactCreate = undefined
+      }
+    }
+
+    return create()
+  }
+
+  private isBlankFactDraft(draft: FactDraft): boolean {
+    return (
+      !draft.value.trim() &&
+      !draft.notes?.trim() &&
+      (!draft.kind || draft.kind === 'plain') &&
+      (!draft.title.trim() || draft.title === 'Untitled fact')
     )
-    await this.sync.sync()
-    await this.openFact(fact)
-    return fact
+  }
+
+  private isReusableBlankFact(fact: FactItem): boolean {
+    return (
+      !fact.trashed &&
+      !fact.archived &&
+      !fact.value.trim() &&
+      !fact.notes?.trim() &&
+      (!fact.kind || fact.kind === 'plain') &&
+      (!fact.title.trim() || fact.title === 'Untitled fact')
+    )
+  }
+
+  private findReusableBlankFact(): FactItem | undefined {
+    if (this.pendingBlankFact && this.isReusableBlankFact(this.pendingBlankFact)) {
+      return this.pendingBlankFact
+    }
+
+    return this.facts.find((fact) => this.isReusableBlankFact(fact))
   }
 
   async updateFact(fact: FactItem, draft: FactDraft): Promise<void> {
@@ -218,6 +275,9 @@ export class FactsController extends AbstractViewController implements InternalE
       this.items.streamItems<FactItem>(FactContentType, () => {
         runInAction(() => {
           this.facts = this.items.getItems<FactItem>(FactContentType)
+          if (this.pendingBlankFact && this.facts.some((fact) => fact.uuid === this.pendingBlankFact?.uuid)) {
+            this.pendingBlankFact = undefined
+          }
         })
       }),
     )

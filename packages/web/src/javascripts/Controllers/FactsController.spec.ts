@@ -115,6 +115,39 @@ describe('FactsController', () => {
     expect(controller.filteredFacts).toEqual([phone])
   })
 
+  it('reuses an existing blank Fact instead of creating another blank Fact', async () => {
+    const blankFact = createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+    const { controller, mutator, itemControllerGroup } = createController([blankFact])
+
+    await controller.createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+
+    expect(mutator.createItem).not.toHaveBeenCalled()
+    expect(itemControllerGroup.createItemController).toHaveBeenCalledWith({ fact: blankFact })
+  })
+
+  it('coalesces repeated in-flight blank Fact creates', async () => {
+    const createdFact = createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+    const { controller, mutator, sync } = createController([])
+
+    let resolveCreate: (fact: FactItem) => void
+    mutator.createItem.mockReturnValue(
+      new Promise<FactItem>((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+
+    const firstCreate = controller.createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+    const secondCreate = controller.createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+
+    resolveCreate!(createdFact)
+
+    await expect(firstCreate).resolves.toBe(createdFact)
+    await expect(secondCreate).resolves.toBe(createdFact)
+
+    expect(mutator.createItem).toHaveBeenCalledTimes(1)
+    expect(sync.sync).toHaveBeenCalledTimes(1)
+  })
+
   it('hides protected values from preview/search until an unprotected session is active', async () => {
     const fact = createFact({ title: 'Tax ID', value: 'SECRET', protected: true })
     const { controller, protections } = createController([fact])
