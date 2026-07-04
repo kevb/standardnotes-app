@@ -13,9 +13,15 @@ on:
         required: true
         type: boolean
         default: true
+      publish_release:
+        description: Publish built artifacts as a GitHub prerelease
+        required: true
+        type: boolean
+        default: true
 
 permissions:
-  contents: read
+  actions: read
+  contents: write
 
 concurrency:
   group: test-artifacts-${{ github.ref }}
@@ -92,3 +98,52 @@ jobs:
     uses: ./.github/workflows/desktop.build.reuse.yml
     with:
       platform: mac
+
+  publish-test-release:
+    name: Publish Test Release
+    if: ${{ always() && inputs.publish_release && (needs.android-test-apk.result == 'success' || !inputs.build_android) && (needs.macos-test-binaries.result == 'success' || !inputs.build_macos) }}
+    needs:
+      - android-test-apk
+      - macos-test-binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Set release metadata
+        id: release
+        run: |
+          short_sha="${GITHUB_SHA::9}"
+          tag="test-artifacts-${GITHUB_RUN_NUMBER}-${short_sha}"
+          {
+            echo "tag=${tag}"
+            echo "title=Test artifacts ${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize release assets
+        run: find release-assets -maxdepth 4 -type f -print | sort
+
+      - name: Publish prerelease
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: ${{ steps.release.outputs.title }}
+          body: |
+            Test build from `${{ github.sha }}`.
+
+            Includes debug-signed Android dev APK and unsigned macOS artifacts produced by this workflow run.
+
+            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          prerelease: true
+          draft: false
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/**/*.apk
+            release-assets/**/*.dmg
+            release-assets/**/*.zip
+            release-assets/**/*.blockmap
+            release-assets/**/*.yml
+            release-assets/**/*.yaml
