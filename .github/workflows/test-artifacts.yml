@@ -18,6 +18,11 @@ on:
         required: true
         type: boolean
         default: true
+      source_run_id:
+        description: Existing workflow run ID to publish artifacts from; leave empty to publish this run
+        required: false
+        type: string
+        default: ''
 
 permissions:
   actions: read
@@ -112,6 +117,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Set release metadata
         id: release
@@ -136,10 +143,12 @@ jobs:
 
             Includes debug-signed Android dev APK and unsigned macOS artifacts produced by this workflow run.
 
-            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Publish workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Artifact source run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ inputs.source_run_id || github.run_id }}
           prerelease: true
           draft: false
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           files: |
             release-assets/**/*.apk
             release-assets/**/*.dmg
