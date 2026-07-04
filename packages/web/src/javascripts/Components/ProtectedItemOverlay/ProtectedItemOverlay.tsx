@@ -5,7 +5,7 @@ type Props = {
   showAccountMenu: () => void
   onViewItem: () => void
   hasProtectionSources: boolean
-  itemType: 'note' | 'file'
+  itemType: 'note' | 'file' | 'fact'
 }
 
 const ProtectedItemOverlay = ({ showAccountMenu, onViewItem, hasProtectionSources, itemType }: Props) => {

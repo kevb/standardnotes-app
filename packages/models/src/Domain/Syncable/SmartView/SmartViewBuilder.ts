@@ -11,6 +11,7 @@ import { PayloadTimestampDefaults } from '../../Abstract/Payload'
 import { NotesAndFilesDisplayOptions } from '../../Runtime/Display'
 import { FileItem } from '../File'
 import { ContentType } from '@standardnotes/domain-core'
+import { FactContentType, FactItem } from '../Fact'
 
 export function BuildSmartViews(options: NotesAndFilesDisplayOptions): SmartView[] {
   const notes = new SmartView(
@@ -33,6 +34,18 @@ export function BuildSmartViews(options: NotesAndFilesDisplayOptions): SmartView
       content: FillItemContent<SmartViewContent>({
         title: 'Files',
         predicate: filesPredicate(options).toJson(),
+      }),
+    }),
+  )
+
+  const facts = new SmartView(
+    new DecryptedPayload({
+      uuid: SystemViewId.Facts,
+      content_type: ContentType.TYPES.SmartView,
+      ...PayloadTimestampDefaults(),
+      content: FillItemContent<SmartViewContent>({
+        title: 'Facts',
+        predicate: factsPredicate(options).toJson(),
       }),
     }),
   )
@@ -97,7 +110,7 @@ export function BuildSmartViews(options: NotesAndFilesDisplayOptions): SmartView
     }),
   )
 
-  return [notes, files, starred, archived, trash, untagged, conflicts]
+  return [notes, files, facts, starred, archived, trash, untagged, conflicts]
 }
 
 function allNotesPredicate(options: NotesAndFilesDisplayOptions) {
@@ -122,6 +135,26 @@ function allNotesPredicate(options: NotesAndFilesDisplayOptions) {
 
 function filesPredicate(options: NotesAndFilesDisplayOptions) {
   const subPredicates: Predicate<FileItem>[] = [new Predicate('content_type', '=', ContentType.TYPES.File)]
+
+  if (options.includeTrashed === false) {
+    subPredicates.push(new Predicate('trashed', '=', false))
+  }
+  if (options.includeArchived === false) {
+    subPredicates.push(new Predicate('archived', '=', false))
+  }
+  if (options.includeProtected === false) {
+    subPredicates.push(new Predicate('protected', '=', false))
+  }
+  if (options.includePinned === false) {
+    subPredicates.push(new Predicate('pinned', '=', false))
+  }
+  const predicate = new CompoundPredicate('and', subPredicates)
+
+  return predicate
+}
+
+function factsPredicate(options: NotesAndFilesDisplayOptions) {
+  const subPredicates: Predicate<FactItem>[] = [new Predicate('content_type', '=', FactContentType)]
 
   if (options.includeTrashed === false) {
     subPredicates.push(new Predicate('trashed', '=', false))

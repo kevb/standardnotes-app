@@ -1,0 +1,91 @@
+name: Test App Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build debug-signed Android dev release APK
+        required: true
+        type: boolean
+        default: true
+      build_macos:
+        description: Build unsigned macOS DMG/ZIP artifacts
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-test-apk:
+    name: Android Test APK
+    if: ${{ inputs.build_android }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build shared web bundle
+        run: yarn build:web
+
+      - name: Prepare mobile web assets
+        run: yarn workspace @standardnotes/mobile bundle:web
+
+      - name: Bundle Android JavaScript
+        run: yarn workspace @standardnotes/mobile android:bundle
+
+      - name: Set app version
+        run: echo "APP_VERSION=$(node -p 'require("./packages/web/package.json").version.split("-")[0]')" >> "$GITHUB_ENV"
+
+      - name: Assemble debug-signed dev release APK
+        working-directory: packages/mobile/android
+        env:
+          DETOX_CI: '1'
+        run: |
+          ./gradlew assembleDevRelease \
+            -PversionName="${APP_VERSION}" \
+            -PversionCode="${{ github.run_number }}" \
+            --stacktrace
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-notes-android-test-apk
+          retention-days: 14
+          if-no-files-found: error
+          path: packages/mobile/android/app/build/outputs/apk/dev/release/app-dev-release.apk
+
+  macos-test-binaries:
+    name: macOS Test Binaries
+    if: ${{ inputs.build_macos }}
+    uses: ./.github/workflows/desktop.build.reuse.yml
+    with:
+      platform: mac

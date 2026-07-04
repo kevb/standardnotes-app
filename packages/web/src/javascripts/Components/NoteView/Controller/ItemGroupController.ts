@@ -3,6 +3,7 @@ import {
   AlertService,
   ComponentManagerInterface,
   FileItem,
+  FactItem,
   ItemManagerInterface,
   MutatorClientInterface,
   PreferenceServiceInterface,
@@ -12,13 +13,15 @@ import {
 } from '@standardnotes/snjs'
 import { NoteViewController } from './NoteViewController'
 import { FileViewController } from './FileViewController'
+import { FactViewController } from './FactViewController'
 import { TemplateNoteViewControllerOptions } from './TemplateNoteViewControllerOptions'
 import { IsNativeMobileWeb } from '@standardnotes/ui-services'
 
-type ItemControllerGroupChangeCallback = (activeController: NoteViewController | FileViewController | undefined) => void
+type ItemViewController = NoteViewController | FileViewController | FactViewController
+type ItemControllerGroupChangeCallback = (activeController: ItemViewController | undefined) => void
 
 export class ItemGroupController {
-  public itemControllers: (NoteViewController | FileViewController)[] = []
+  public itemControllers: ItemViewController[] = []
   changeObservers: ItemControllerGroupChangeCallback[] = []
   eventObservers: (() => void)[] = []
 
@@ -51,17 +54,20 @@ export class ItemGroupController {
 
   async createItemController(context: {
     file?: FileItem
+    fact?: FactItem
     note?: SNNote
     templateOptions?: TemplateNoteViewControllerOptions
-  }): Promise<NoteViewController | FileViewController> {
+  }): Promise<ItemViewController> {
     if (this.activeItemViewController) {
       this.closeItemController(this.activeItemViewController, { notify: false })
     }
 
-    let controller!: NoteViewController | FileViewController
+    let controller!: ItemViewController
 
     if (context.file) {
       controller = new FileViewController(context.file, this.items)
+    } else if (context.fact) {
+      controller = new FactViewController(context.fact, this.items)
     } else if (context.note) {
       controller = new NoteViewController(
         context.note,
@@ -101,7 +107,7 @@ export class ItemGroupController {
   }
 
   public closeItemController(
-    controller: NoteViewController | FileViewController,
+    controller: ItemViewController,
     { notify = true }: { notify: boolean } = { notify: true },
   ): void {
     if (controller instanceof NoteViewController) {
@@ -132,7 +138,7 @@ export class ItemGroupController {
     this.notifyObservers()
   }
 
-  get activeItemViewController(): NoteViewController | FileViewController | undefined {
+  get activeItemViewController(): ItemViewController | undefined {
     return this.itemControllers[0]
   }
 

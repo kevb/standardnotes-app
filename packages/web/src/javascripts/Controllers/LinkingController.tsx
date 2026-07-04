@@ -96,7 +96,8 @@ export class LinkingController extends AbstractViewController implements Interna
   }
 
   get activeItem() {
-    return this.itemControllerGroup.activeItemViewController?.item
+    const item = this.itemControllerGroup.activeItemViewController?.item
+    return item && (isNote(item) || isFile(item)) ? item : undefined
   }
 
   getFilesLinksForItem = (item: LinkableItem | undefined) => {

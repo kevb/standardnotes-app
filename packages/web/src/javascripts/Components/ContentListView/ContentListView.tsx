@@ -35,6 +35,7 @@ import { mergeRefs } from '@/Hooks/mergeRefs'
 import Icon from '../Icon/Icon'
 import MobileMultiSelectionToolbar from './MobileMultiSelectionToolbar'
 import StyledTooltip from '../StyledTooltip/StyledTooltip'
+import FactsListView from '../Facts/FactsListView'
 
 type Props = {
   application: WebApplication
@@ -146,12 +147,16 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
       innerRef,
     ])
 
-    const icon = selectedTag?.iconString
+    const isFactsView = navigationController.isInFactsView
+    const icon = isFactsView ? 'details-block' : selectedTag?.iconString
 
     const isFilesSmartView = useMemo(() => navigationController.isInFilesView, [navigationController.isInFilesView])
 
     const addNewItem = useCallback(async () => {
-      if (isFilesSmartView) {
+      if (isFactsView) {
+        await application.factsController.createFact({ title: 'Untitled fact', value: '', kind: 'plain' })
+        setPaneLayout(PaneLayout.Editing)
+      } else if (isFilesSmartView) {
         if (!application.entitledToFiles) {
           application.showPremiumModal(FeatureName.Files)
           return
@@ -162,7 +167,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
         await createNewNote()
         setPaneLayout(PaneLayout.Editing)
       }
-    }, [isFilesSmartView, application, filesController, createNewNote, setPaneLayout])
+    }, [isFactsView, isFilesSmartView, application, filesController, createNewNote, setPaneLayout])
 
     const isMobileScreen = useMediaQuery(MutuallyExclusiveMediaQueryBreakpoints.sm)
     const shouldUseTableView = (isFilesSmartView || isTableViewEnabled) && !isMobileScreen
@@ -184,7 +189,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             if (searchBarElement === document.activeElement) {
               searchBarElement?.blur()
             }
-            if (shouldUseTableView) {
+            if (shouldUseTableView || isFactsView) {
               return
             }
             selectNextItem()
@@ -196,7 +201,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
           description: 'Go to previous item',
           element: document.body,
           onKeyDown: () => {
-            if (shouldUseTableView) {
+            if (shouldUseTableView || isFactsView) {
               return
             }
             selectPreviousItem()
@@ -245,6 +250,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
       selectNextItem,
       selectPreviousItem,
       shouldUseTableView,
+      isFactsView,
     ])
 
     const shortcutForCreate = useMemo(
@@ -257,22 +263,26 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
       if (shortcut) {
         shortcut = '(' + shortcut + ')'
       }
-      return isFilesSmartView ? `Upload file ${shortcut}` : `Create a new note in the selected tag ${shortcut}`
-    }, [isFilesSmartView, shortcutForCreate])
+      return isFactsView
+        ? `Create a new fact ${shortcut}`
+        : isFilesSmartView
+        ? `Upload file ${shortcut}`
+        : `Create a new note in the selected tag ${shortcut}`
+    }, [isFactsView, isFilesSmartView, shortcutForCreate])
 
     useEffect(
       () =>
         application.commands.addWithShortcut(
           CREATE_NEW_NOTE_KEYBOARD_COMMAND,
           'General',
-          isFilesSmartView ? 'Upload file' : 'Create new note',
+          isFactsView ? 'Create new fact' : isFilesSmartView ? 'Upload file' : 'Create new note',
           (event) => {
             event?.preventDefault()
             void addNewItem()
           },
           isFilesSmartView ? 'upload' : 'add',
         ),
-      [addNewItem, application.commands, isFilesSmartView],
+      [addNewItem, application.commands, isFactsView, isFilesSmartView],
     )
 
     const dailyMode = selectedAsTag?.isDailyEntry
@@ -303,10 +313,10 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
       <div
         id={id}
         className={classNames(className, 'sn-component section h-full overflow-hidden pt-safe-top')}
-        aria-label={'Notes & Files'}
+        aria-label={isFactsView ? 'Facts' : 'Notes & Files'}
         ref={mergeRefs([ref, innerRef, setElement])}
       >
-        {isMobileScreen && !itemListController.isMultipleSelectionMode && (
+        {isMobileScreen && (isFactsView || !itemListController.isMultipleSelectionMode) && (
           <FloatingAddButton onClick={addNewItem} label={addButtonLabel} style={dailyMode ? 'danger' : 'info'} />
         )}
         <div id="items-title-bar" className="section-title-bar border-b border-solid border-border">
@@ -314,20 +324,23 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             {selectedTag && (
               <ContentListHeader
                 application={application}
-                panelTitle={panelTitle}
+                panelTitle={isFactsView ? 'Facts' : panelTitle}
                 icon={icon}
                 addButtonLabel={addButtonLabel}
                 addNewItem={addNewItem}
                 isFilesSmartView={isFilesSmartView}
                 isTableViewEnabled={isTableViewEnabled || isFilesSmartView}
-                optionsSubtitle={optionsSubtitle}
+                hideDisplayOptions={isFactsView}
+                optionsSubtitle={
+                  isFactsView ? `${application.factsController.filteredFacts.length} facts` : optionsSubtitle
+                }
                 selectedTag={selectedTag}
                 filesController={filesController}
                 itemListController={itemListController}
                 paneController={paneController}
               />
             )}
-            {(!shouldUseTableView || isMobileScreen) && (
+            {!isFactsView && (!shouldUseTableView || isMobileScreen) && (
               <SearchBar
                 itemListController={itemListController}
                 searchOptionsController={searchOptionsController}
@@ -340,7 +353,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             />
           </div>
         </div>
-        {itemListController.isMultipleSelectionMode && (
+        {!isFactsView && itemListController.isMultipleSelectionMode && (
           <div className="flex items-center border-b border-l-2 border-border border-l-transparent py-2.5 pr-4">
             <div className="px-4">
               <StyledTooltip label="Select all items" showOnHover showOnMobile>
@@ -367,7 +380,8 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             </StyledTooltip>
           </div>
         )}
-        {selectedAsTag && dailyMode && (
+        {isFactsView && <FactsListView application={application} />}
+        {!isFactsView && selectedAsTag && dailyMode && (
           <DailyContentList
             items={items}
             selectedTag={selectedAsTag}
@@ -376,17 +390,17 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             onSelect={handleDailyListSelection}
           />
         )}
-        {!dailyMode && completedFullSync && !renderedItems.length ? (
+        {!isFactsView && !dailyMode && completedFullSync && !renderedItems.length ? (
           isFilesSmartView ? (
             <EmptyFilesView addNewItem={addNewItem} />
           ) : (
             <p className="empty-items-list opacity-50">No items.</p>
           )
         ) : null}
-        {!dailyMode && !completedFullSync && !renderedItems.length ? (
+        {!isFactsView && !dailyMode && !completedFullSync && !renderedItems.length ? (
           <p className="empty-items-list opacity-50">Loading...</p>
         ) : null}
-        {!dailyMode && renderedItems.length ? (
+        {!isFactsView && !dailyMode && renderedItems.length ? (
           shouldUseTableView ? (
             <ContentTableView items={items} application={application} />
           ) : (
@@ -398,7 +412,7 @@ const ContentListView = forwardRef<HTMLDivElement, Props>(
             />
           )
         ) : null}
-        {isMobileScreen && itemListController.isMultipleSelectionMode && (
+        {!isFactsView && isMobileScreen && itemListController.isMultipleSelectionMode && (
           <MobileMultiSelectionToolbar notesController={notesController} navigationController={navigationController} />
         )}
         <div className="absolute bottom-0 h-safe-bottom w-full" />

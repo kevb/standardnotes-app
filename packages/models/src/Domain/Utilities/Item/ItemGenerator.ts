@@ -7,6 +7,7 @@ import { ComponentItem } from '../../Syncable/Component/Component'
 import { SNEditor } from '../../Syncable/Editor/Editor'
 import { DecryptedItem } from '../../Abstract/Item/Implementations/DecryptedItem'
 import { SNNote } from '../../Syncable/Note/Note'
+import { FactContentType, FactItem, FactMutator } from '../../Syncable/Fact'
 import { SmartView } from '../../Syncable/SmartView/SmartView'
 import { SNTag } from '../../Syncable/Tag/Tag'
 import { SNUserPrefs } from '../../Syncable/UserPrefs/UserPrefs'
@@ -63,6 +64,7 @@ const ContentTypeClassMapping: Partial<Record<string, MappingEntry>> = {
   [ContentType.TYPES.Editor]: { itemClass: SNEditor },
   [ContentType.TYPES.ExtensionRepo]: { itemClass: SNFeatureRepo },
   [ContentType.TYPES.File]: { itemClass: FileItem, mutatorClass: FileMutator },
+  [FactContentType]: { itemClass: FactItem, mutatorClass: FactMutator },
   [ContentType.TYPES.Note]: { itemClass: SNNote, mutatorClass: NoteMutator },
   [ContentType.TYPES.SmartView]: { itemClass: SmartView, mutatorClass: SmartViewMutator },
   [ContentType.TYPES.Tag]: { itemClass: SNTag, mutatorClass: TagMutator },

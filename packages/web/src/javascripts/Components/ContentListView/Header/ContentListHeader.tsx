@@ -24,6 +24,7 @@ type Props = {
   addNewItem: () => void
   isFilesSmartView: boolean
   isTableViewEnabled: boolean
+  hideDisplayOptions?: boolean
   optionsSubtitle?: string
   selectedTag: AnyTag
   filesController: FilesController
@@ -39,6 +40,7 @@ const ContentListHeader = ({
   addNewItem,
   isFilesSmartView,
   isTableViewEnabled,
+  hideDisplayOptions,
   optionsSubtitle,
   selectedTag,
   filesController,
@@ -203,12 +205,12 @@ const ContentListHeader = ({
         {FolderName}
         <div className="flex items-start gap-3 md:items-center">
           {SearchBarButton}
-          {OptionsMenu}
+          {!hideDisplayOptions && OptionsMenu}
           {AddButton}
         </div>
       </div>
     )
-  }, [FolderName, SearchBarButton, OptionsMenu, AddButton])
+  }, [FolderName, SearchBarButton, hideDisplayOptions, OptionsMenu, AddButton])
 
   const TabletLayout = useMemo(() => {
     return (
@@ -216,14 +218,14 @@ const ContentListHeader = ({
         <div className="mb-2 flex justify-between">
           <NavigationMenuButton />
           <div className="flex">
-            {OptionsMenu}
+            {!hideDisplayOptions && OptionsMenu}
             {AddButton}
           </div>
         </div>
         {FolderName}
       </div>
     )
-  }, [OptionsMenu, AddButton, FolderName])
+  }, [hideDisplayOptions, OptionsMenu, AddButton, FolderName])
 
   return (
     <div className="section-title-bar-header items-start gap-1">

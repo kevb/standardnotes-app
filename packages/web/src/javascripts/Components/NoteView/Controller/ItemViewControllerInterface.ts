@@ -1,7 +1,7 @@
-import { SNNote, FileItem } from '@standardnotes/models'
+import { FactItem, SNNote, FileItem } from '@standardnotes/models'
 
 export interface ItemViewControllerInterface {
-  item: SNNote | FileItem
+  item: SNNote | FileItem | FactItem
 
   deinit: () => void
   initialize(addTagHierarchy?: boolean): Promise<void>

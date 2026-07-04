@@ -7,12 +7,14 @@ import FileView from '../FileView/FileView'
 import NoteView from '../NoteView/NoteView'
 import { NoteViewController } from '../NoteView/Controller/NoteViewController'
 import { FileViewController } from '../NoteView/Controller/FileViewController'
+import { FactViewController } from '../NoteView/Controller/FactViewController'
 import { WebApplication } from '@/Application/WebApplication'
+import FactView from '../FactView/FactView'
 
 type State = {
   showMultipleSelectedNotes: boolean
   showMultipleSelectedFiles: boolean
-  controllers: (NoteViewController | FileViewController)[]
+  controllers: (NoteViewController | FileViewController | FactViewController)[]
   selectedFile: FileItem | undefined
   selectedPane?: AppPaneId
   isInMobileView?: boolean
@@ -103,6 +105,8 @@ class NoteGroupView extends AbstractComponent<Props, State> {
             {this.state.controllers.map((controller) => {
               return controller instanceof NoteViewController ? (
                 <NoteView key={controller.runtimeId} application={this.application} controller={controller} />
+              ) : controller instanceof FactViewController ? (
+                <FactView key={controller.runtimeId} application={this.application} fact={controller.item} />
               ) : (
                 <FileView key={controller.runtimeId} application={this.application} file={controller.item} />
               )

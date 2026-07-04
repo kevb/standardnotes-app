@@ -100,6 +100,7 @@ export class NavigationController
       allFilesCount_: observable,
       allNotesCount: computed,
       allFilesCount: computed,
+      isInFactsView: computed,
       setAllNotesCount: action,
       setAllFilesCount: action,
 
@@ -328,6 +329,10 @@ export class NavigationController
 
   public get isInFilesView(): boolean {
     return this.selectedUuid === SystemViewId.Files
+  }
+
+  public get isInFactsView(): boolean {
+    return this.selectedUuid === SystemViewId.Facts
   }
 
   isTagFilesView(tag: AnyTag): boolean {

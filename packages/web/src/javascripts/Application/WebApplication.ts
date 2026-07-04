@@ -61,6 +61,7 @@ import { PaneController } from '@/Controllers/PaneController/PaneController'
 import { LinkingController } from '@/Controllers/LinkingController'
 import { MomentsService } from '@/Controllers/Moments/MomentsService'
 import { FeaturesController } from '@/Controllers/FeaturesController'
+import { FactsController } from '@/Controllers/FactsController'
 import { FilesController } from '@/Controllers/FilesController'
 import { ItemListController } from '@/Controllers/ItemList/ItemListController'
 import { AndroidBackHandler } from '@/NativeMobileWeb/AndroidBackHandler'
@@ -615,6 +616,10 @@ export class WebApplication extends SNApplication implements WebApplicationInter
 
   get featuresController(): FeaturesController {
     return this.deps.get<FeaturesController>(Web_TYPES.FeaturesController)
+  }
+
+  get factsController(): FactsController {
+    return this.deps.get<FactsController>(Web_TYPES.FactsController)
   }
 
   get filesController(): FilesController {

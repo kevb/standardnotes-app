@@ -4,6 +4,7 @@ import { IconType } from '../../Utilities/Icon/IconType'
 export const SmartViewIcons: Record<SystemViewId, IconType> = {
   [SystemViewId.AllNotes]: 'notes',
   [SystemViewId.Files]: 'folder',
+  [SystemViewId.Facts]: 'details-block',
   [SystemViewId.ArchivedNotes]: 'archive',
   [SystemViewId.TrashedNotes]: 'trash',
   [SystemViewId.UntaggedNotes]: 'hashtag-off',

@@ -1,6 +1,7 @@
 export enum SystemViewId {
   AllNotes = 'all-notes',
   Files = 'files',
+  Facts = 'facts',
   ArchivedNotes = 'archived-notes',
   TrashedNotes = 'trashed-notes',
   UntaggedNotes = 'untagged-notes',

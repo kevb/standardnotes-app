@@ -26,6 +26,7 @@ import { FilePreviewModalController } from '@/Controllers/FilePreviewModalContro
 import { PaneController } from '@/Controllers/PaneController/PaneController'
 import { PreferencesController } from '@/Controllers/PreferencesController'
 import { FeaturesController } from '@/Controllers/FeaturesController'
+import { FactsController } from '@/Controllers/FactsController'
 import { NavigationController } from '@/Controllers/Navigation/NavigationController'
 import { NotesController } from '@/Controllers/NotesController/NotesController'
 import { ItemListController } from '@/Controllers/ItemList/ItemListController'
@@ -359,6 +360,18 @@ export class WebDependencies extends DependencyContainer {
 
     this.bind(Web_TYPES.ActionsMenuController, () => {
       return new ActionsMenuController()
+    })
+
+    this.bind(Web_TYPES.FactsController, () => {
+      return new FactsController(
+        application.items,
+        application.mutator,
+        application.sync,
+        application.protections,
+        application.alerts,
+        this.get<ItemGroupController>(Web_TYPES.ItemGroupController),
+        application.events,
+      )
     })
 
     this.bind(Web_TYPES.FilesController, () => {

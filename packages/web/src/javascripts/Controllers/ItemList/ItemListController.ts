@@ -32,6 +32,7 @@ import {
   FullyResolvedApplicationOptions,
   Uuids,
   isNote,
+  isFact,
   ChallengeReason,
   KeyboardModifier,
 } from '@standardnotes/snjs'
@@ -46,6 +47,7 @@ import { AbstractViewController } from '../Abstract/AbstractViewController'
 import { log, LoggingDomain } from '@/Logging'
 import { NoteViewController } from '@/Components/NoteView/Controller/NoteViewController'
 import { FileViewController } from '@/Components/NoteView/Controller/FileViewController'
+import { FactViewController } from '@/Components/NoteView/Controller/FactViewController'
 import { TemplateNoteViewAutofocusBehavior } from '@/Components/NoteView/Controller/TemplateNoteViewControllerOptions'
 import { ItemsReloadSource } from './ItemsReloadSource'
 import {
@@ -363,7 +365,7 @@ export class ItemListController
     return this.renderedItems.length
   }
 
-  public getActiveItemController(): NoteViewController | FileViewController | undefined {
+  public getActiveItemController() {
     return this.itemControllerGroup.activeItemViewController
   }
 
@@ -459,8 +461,13 @@ export class ItemListController
     this.reloadPanelTitle()
   }
 
-  private shouldLeaveSelectionUnchanged = (activeController: NoteViewController | FileViewController | undefined) => {
-    return activeController instanceof NoteViewController && activeController.isTemplateNote
+  private shouldLeaveSelectionUnchanged = (
+    activeController: NoteViewController | FileViewController | FactViewController | undefined,
+  ) => {
+    return (
+      (activeController instanceof NoteViewController && activeController.isTemplateNote) ||
+      (activeController?.item && isFact(activeController.item))
+    )
   }
 
   /**
@@ -585,6 +592,11 @@ export class ItemListController
     }
 
     const activeItem = activeController?.item
+
+    if (activeItem && isFact(activeItem)) {
+      log(LoggingDomain.Selection, 'Leaving fact selection unchanged')
+      return
+    }
 
     if (activeController && activeItem && this.shouldCloseActiveItem(activeItem, itemsReloadSource)) {
       this.closeItemController(activeController)
@@ -946,7 +958,7 @@ export class ItemListController
     }
   }
 
-  private closeItemController(controller: NoteViewController | FileViewController): void {
+  private closeItemController(controller: NoteViewController | FileViewController | FactViewController): void {
     log(LoggingDomain.Selection, 'Closing item controller', controller.runtimeId)
     this.itemControllerGroup.closeItemController(controller)
   }
